@@ -1,0 +1,71 @@
+import socket
+from Threading import Thread  
+class ProxyServer2(Thread): #thread that handles the connection to the real game server
+
+	def _init_(self, host, port):
+		super(ProxyServer2, self)._init_()
+		self.game = None #socket that is connected to the game client
+		self.port = port
+		self.host = host
+		self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.server.connect((host, port))
+
+
+
+	def run(self):
+		while (True):
+			data = self.server.recv(4096)
+			if data: 
+				print "[{}] <- {}".format(self.port, data[:100].encode('hex'))
+				# what the  server answers 
+				
+				self.game.sendall(data) #forward to the client
+class Game2Proxy(Thread): 
+	def _init_(self, host, port):
+		super(Game2Proxy, self)._init_
+		self.server = None #socket not known yet
+		self.port = port
+		self.host = host
+		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		sock.bind((host, port))
+		sock.listen(1)
+
+		#waiting for a connection
+		self.game, addr = sock.accept()
+
+ 	def run(self): 
+ 		while (True):
+ 			data = self.game.recv(4096)
+ 			if(data):
+ 				self.server.sendall(data)
+
+class Proxy(Thread):
+	def _init_(self, from_host, to_host, port):
+		super(Proxy,self)._init_()
+		self.from_host = from_host
+		self.to_host = to_host
+		self.port = port
+
+	def run(self): 
+		while (True):
+			print "[proxy({})] Setting Up".format(self.port)
+			self.g2p = Game2Proxy(self.from_host, self.port) # client connects to this
+			self.p2s = ProxyServer2(self.from_host, self.port) #establishes a forwarding connection to the server
+			print "[proxy({})] connection established".format(self.port)
+			self.g2p.server = self.p2s.server #exchanges socket references
+			self.p2s.game = self.g2p.game
+
+			self.g2p.start()
+			self.p2s.start()
+
+			master_server = Proxy('0.0.0.0', '192.168.178.54', 3333) #listens on all interfaces on port 3333, and forward them to the real server IP
+			master_server.start()
+
+			for port in range(3000, 3006)
+				_game_server = Proxy('0.0.0.0', '192.168.178.54', port) #loops through all ports the client might connect through
+				_game_server.start()
+					if data:
+						print "[{}] -> {}".format(self.port, data[:100].encode('hex'))
+						# forward to the server
+						self.server.sendall(data)
